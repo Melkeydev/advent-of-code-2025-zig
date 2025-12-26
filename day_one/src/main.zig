@@ -1,5 +1,4 @@
 const std = @import("std");
-const advent_of_code = @import("advent_of_code");
 var stdout_buffer: [1024]u8 = undefined;
 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
 const stdout = &stdout_writer.interface;
@@ -26,7 +25,7 @@ pub fn main() !void {
 }
 
 fn open_file() !fs.File {
-    const file = try std.fs.cwd().openFile("src/inputs.txt", .{});
+    const file = try std.fs.cwd().openFile("inputs.txt", .{});
     return file;
 }
 
