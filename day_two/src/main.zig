@@ -4,22 +4,22 @@ var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
 const stdout = &stdout_writer.interface;
 const fs = std.fs;
 
-// Day 1
-//
-// first step read an input file
-// if/else statement keeping track of first character for either L or R
-// edge cases
-// starts at 50
+// Day 2
+// Read input.txt
+// Separate each range of values by their comma
+// all duplicates need to be invalided. 11 is invalid. 1212 is invalid. 123123 is invalid. *this part is kind of confusing
+// separate the two values from the '-'
+// loop (inclusive) from the first to the last value
+// combine all the invalid numbers in each comma range
+
 pub fn main() !void {
-    var dial_position: i32 = 50;
-    var counter: i32 = 0;
+    var counter: u64 = 0;
 
     var file = try open_file();
     defer file.close();
 
-    try read_file(file, &dial_position, &counter);
+    try read_file(file, &counter);
 
-    try stdout.print("final position value - {d}\n", .{dial_position});
     try stdout.print("the counter is - {d}\n", .{counter});
     try stdout.flush();
 }
@@ -29,35 +29,39 @@ fn open_file() !fs.File {
     return file;
 }
 
-fn read_file(file: fs.File, dial_position: *i32, counter: *i32) !void {
+fn read_file(file: fs.File, counter: *u64) !void {
     var buffer: [1024]u8 = undefined;
     var file_reader = file.reader(&buffer);
     const reader = &file_reader.interface;
 
-    while (reader.takeDelimiterExclusive('\n')) |line| {
-        const trimmed_line = std.mem.trimRight(u8, line, "\r");
-        try process_code(trimmed_line, dial_position, counter);
+    while (reader.takeDelimiterExclusive(',')) |line| {
+        const trimmed_line = std.mem.trimRight(u8, line, "\r\n");
+
+        var parts = std.mem.splitScalar(u8, trimmed_line, '-');
+        const first_num = try std.fmt.parseInt(u64, parts.next().?, 10);
+        const second_num = try std.fmt.parseInt(u64, parts.next().?, 10);
+
+        var value = first_num;
+
+        while (value <= second_num) : (value += 1) {
+            var num_buf: [20]u8 = undefined;
+            const num_str = std.fmt.bufPrint(&num_buf, "{d}", .{value}) catch unreachable;
+
+            if (num_str.len % 2 == 0) {
+                const half = num_str.len / 2;
+                const first_half = num_str[0..half];
+                const second_half = num_str[half..];
+
+                if (std.mem.eql(u8, first_half, second_half)) {
+                    try stdout.print("invalid: {s}\n", .{num_str});
+                    const num_int = try std.fmt.parseInt(u64, num_str, 10);
+                    counter.* = counter.* + num_int;
+                }
+            }
+        }
     } else |err| {
         if (err != error.EndOfStream) return err;
     }
 }
 
-fn process_code(code: []const u8, dial_position: *i32, counter: *i32) !void {
-    const direction = code[0];
-    const value = try std.fmt.parseInt(i32, code[1..], 10);
-    const start = dial_position.*;
-
-    if (direction == 'R') {
-        // Count how many times we pass through 0
-        counter.* += @divTrunc(start + value, 100);
-        dial_position.* = @mod(start + value, 100);
-    } else {
-        // For L direction
-        if (start == 0) {
-            counter.* += @divTrunc(value, 100);
-        } else if (value >= start) {
-            counter.* += 1 + @divTrunc(value - start, 100);
-        }
-        dial_position.* = @mod(start - value, 100);
-    }
-}
+fn process_code() !void {}
