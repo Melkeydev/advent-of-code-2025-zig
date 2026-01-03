@@ -47,15 +47,25 @@ fn read_file(file: fs.File, counter: *u64) !void {
             var num_buf: [20]u8 = undefined;
             const num_str = std.fmt.bufPrint(&num_buf, "{d}", .{value}) catch unreachable;
 
-            if (num_str.len % 2 == 0) {
-                const half = num_str.len / 2;
-                const first_half = num_str[0..half];
-                const second_half = num_str[half..];
+            var pattern_len: usize = 1;
+            while (pattern_len <= num_str.len / 2) : (pattern_len += 1) {
+                // Must divide evenly
+                if (num_str.len % pattern_len == 0) {
+                    const pattern = num_str[0..pattern_len];
 
-                if (std.mem.eql(u8, first_half, second_half)) {
-                    try stdout.print("invalid: {s}\n", .{num_str});
-                    const num_int = try std.fmt.parseInt(u64, num_str, 10);
-                    counter.* = counter.* + num_int;
+                    var is_repeat = true;
+                    var i: usize = pattern_len;
+                    while (i < num_str.len) : (i += pattern_len) {
+                        if (!std.mem.eql(u8, num_str[i .. i + pattern_len], pattern)) {
+                            is_repeat = false;
+                            break;
+                        }
+                    }
+
+                    if (is_repeat) {
+                        counter.* += value;
+                        break;
+                    }
                 }
             }
         }
