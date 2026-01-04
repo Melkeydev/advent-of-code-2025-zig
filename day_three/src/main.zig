@@ -17,7 +17,7 @@ pub fn main() !void {
 
     try read_file(file, &counter);
 
-    try stdout.print("this is the counter - {any}", .{counter});
+    try stdout.print("this is the counter - {any}\n", .{counter});
     try stdout.flush();
 }
 
@@ -33,21 +33,32 @@ fn read_file(file: fs.File, counter: *u64) !void {
 
     // this was my previous mistake
     while (reader.takeDelimiterExclusive('\n')) |line| {
-        var max_joltage: u8 = 0;
         const trimmed_line = std.mem.trimRight(u8, line, "\r\n");
 
-        for (trimmed_line, 0..) |_, x| {
-            for (trimmed_line[x + 1 ..], x + 1..) |_, y| {
-                const tens = trimmed_line[x] - '0';
-                const ones = trimmed_line[y] - '0';
-                const joltage = tens * 10 + ones;
+        var result: [12]u8 = undefined;
+        var start: usize = 0;
+        const k: usize = 12;
 
-                if (joltage > max_joltage) {
-                    max_joltage = joltage;
+        for (0..k) |i| {
+            const end = trimmed_line.len - (k - i);
+            var max_digit: u8 = 0;
+            var max_pos: usize = start;
+
+            var pos = start;
+
+            while (pos <= end) : (pos += 1) {
+                if (trimmed_line[pos] > max_digit) {
+                    max_digit = trimmed_line[pos];
+                    max_pos = pos;
                 }
             }
+
+            result[i] = max_digit;
+            start = max_pos + 1;
         }
-        counter.* = counter.* + max_joltage;
+
+        const joltage = try std.fmt.parseInt(u64, &result, 10);
+        counter.* = counter.* + joltage;
     } else |err| {
         if (err != error.EndOfStream) return err;
     }
