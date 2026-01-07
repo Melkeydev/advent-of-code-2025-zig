@@ -5,15 +5,22 @@ var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
 const stdout = &stdout_writer.interface;
 const fs = std.fs;
 
+// This is a BFS or DFS problem (similar to islands problem)
+// Right now i am reading line by line but i just need to read the whole thing at once
+//
 pub fn main() !void {
     var counter: u64 = 0;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
     var file = try open_file();
     defer file.close();
 
-    try read_file(file, &counter);
+    try read_file(file, &counter, allocator);
 
     try stdout.print("this is the final counter - {d}\n", .{counter});
+    try stdout.flush();
 }
 
 fn open_file() !fs.File {
@@ -21,16 +28,64 @@ fn open_file() !fs.File {
     return file;
 }
 
-fn read_file(file: fs.File, counter: *u64) !void {
-    var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
-    const reader = &file_reader.interface;
+fn read_file(file: fs.File, counter: *u64, allocator: std.mem.Allocator) !void {
+    const contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(contents);
 
-    while (reader.takeDelimiterExclusive('\n')) |line| {
-        const trimmed_line = std.mem.trimRight(u8, line, "\r\n");
+    var lines = std.mem.splitScalar(u8, contents, '\n');
+    var grid_buf: [150][]const u8 = undefined;
+    var grid_len: usize = 0;
 
-        try stdout.print("this is the trimmed_line - {s} and counter - {d}\n", .{ trimmed_line, counter.* });
-    } else |err| {
-        if (err != error.EndOfStream) return err;
+    while (lines.next()) |line| {
+        if (line.len > 0) {
+            grid_buf[grid_len] = line;
+            grid_len += 1;
+        }
+    }
+    const grid = grid_buf[0..grid_len];
+
+    for (grid, 0..) |row, y| {
+        for (row, 0..) |cell, x| {
+            if (cell == '@') {
+                var inner_counter: u8 = 0;
+
+                // top-left
+                if (x > 0 and y > 0) {
+                    if (grid[y - 1][x - 1] == '@') inner_counter += 1;
+                }
+                // top
+                if (y > 0) {
+                    if (grid[y - 1][x] == '@') inner_counter += 1;
+                }
+                // top-right
+                if (x + 1 < row.len and y > 0) {
+                    if (grid[y - 1][x + 1] == '@') inner_counter += 1;
+                }
+                // left
+                if (x > 0) {
+                    if (grid[y][x - 1] == '@') inner_counter += 1;
+                }
+                // right
+                if (x + 1 < row.len) {
+                    if (grid[y][x + 1] == '@') inner_counter += 1;
+                }
+                // bottom-left
+                if (x > 0 and y + 1 < grid.len) {
+                    if (grid[y + 1][x - 1] == '@') inner_counter += 1;
+                }
+                // bottom
+                if (y + 1 < grid.len) {
+                    if (grid[y + 1][x] == '@') inner_counter += 1;
+                }
+                // bottom-right
+                if (x + 1 < row.len and y + 1 < grid.len) {
+                    if (grid[y + 1][x + 1] == '@') inner_counter += 1;
+                }
+
+                if (inner_counter < 4) {
+                    counter.* += 1;
+                }
+            }
+        }
     }
 }
