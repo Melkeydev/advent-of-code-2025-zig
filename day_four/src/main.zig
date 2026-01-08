@@ -8,6 +8,12 @@ const fs = std.fs;
 // This is a BFS or DFS problem (similar to islands problem)
 // Right now i am reading line by line but i just need to read the whole thing at once
 //
+
+const Position = struct {
+    x: usize,
+    y: usize,
+};
+
 pub fn main() !void {
     var counter: u64 = 0;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -29,21 +35,38 @@ fn open_file() !fs.File {
 }
 
 fn read_file(file: fs.File, counter: *u64, allocator: std.mem.Allocator) !void {
+    // load the contents into memory
     const contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(contents);
 
+    // create an iterator
     var lines = std.mem.splitScalar(u8, contents, '\n');
-    var grid_buf: [150][]const u8 = undefined;
+    var grid_buf: [150][]u8 = undefined;
     var grid_len: usize = 0;
 
     while (lines.next()) |line| {
         if (line.len > 0) {
-            grid_buf[grid_len] = line;
+            grid_buf[grid_len] = @constCast(line);
             grid_len += 1;
         }
     }
     const grid = grid_buf[0..grid_len];
 
+    while (true) {
+        const to_remove = find_rolls(grid);
+        counter.* += to_remove.len;
+
+        remove_rolls(grid, to_remove);
+
+        if (to_remove.len == 0) {
+            break;
+        }
+    }
+}
+
+fn find_rolls(grid: [][]u8) []Position {
+    var positions: [5000]Position = undefined;
+    var count: usize = 0;
     for (grid, 0..) |row, y| {
         for (row, 0..) |cell, x| {
             if (cell == '@') {
@@ -83,9 +106,20 @@ fn read_file(file: fs.File, counter: *u64, allocator: std.mem.Allocator) !void {
                 }
 
                 if (inner_counter < 4) {
-                    counter.* += 1;
+                    positions[count] = .{ .x = x, .y = y };
+                    count += 1;
                 }
             }
         }
+    }
+    return positions[0..count];
+}
+
+fn remove_rolls(grid: [][]u8, positions: []Position) void {
+    // we change '@' to '.'
+
+    // positoins is a list of positions
+    for (positions) |pos| {
+        grid[pos.y][pos.x] = '.';
     }
 }
