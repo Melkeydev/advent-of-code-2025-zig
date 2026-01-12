@@ -27,9 +27,13 @@ pub fn main() !void {
     defer allocator.free(parsed_results.ranges);
     defer allocator.free(parsed_results.values);
 
-    // now we need a function that checks
+    // Part 1
     check_results(parsed_results, &counter);
-    try stdout.print("this is the counter: {d}", .{counter});
+    try stdout.print("Part 1 counter: {d}\n", .{counter});
+
+    // Part 2
+    const fresh_count = count_fresh_ids(parsed_results.ranges);
+    try stdout.print("Part 2 fresh IDs: {d}\n", .{fresh_count});
     try stdout.flush();
 }
 
@@ -42,6 +46,33 @@ fn check_results(parsed_results: ParseResult, counter: *u64) void {
             }
         }
     }
+}
+
+fn count_fresh_ids(ranges: []Range) u64 {
+    if (ranges.len == 0) return 0;
+
+    std.mem.sort(Range, ranges, {}, struct {
+        fn lessThan(_: void, a: Range, b: Range) bool {
+            return a.start < b.start;
+        }
+    }.lessThan);
+
+    var total: u64 = 0;
+    var current_start = ranges[0].start;
+    var current_end = ranges[0].end;
+
+    for (ranges[1..]) |range| {
+        if (range.start <= current_end + 1) {
+            current_end = @max(current_end, range.end);
+        } else {
+            total += current_end - current_start + 1;
+            current_start = range.start;
+            current_end = range.end;
+        }
+    }
+    total += current_end - current_start + 1;
+
+    return total;
 }
 
 // this will need to return the array with the ranges
