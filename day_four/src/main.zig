@@ -116,9 +116,6 @@ fn find_rolls(grid: [][]u8) []Position {
 }
 
 fn remove_rolls(grid: [][]u8, positions: []Position) void {
-    // we change '@' to '.'
-
-    // positoins is a list of positions
     for (positions) |pos| {
         grid[pos.y][pos.x] = '.';
     }
